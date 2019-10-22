@@ -103,39 +103,51 @@ app.post('/loginfo', function (req, res) {  // 新建的路由，以及此路由
 
 app.post('/submit', upload.array("file", 5), async (req, res) => {  // 新建的路由，以及此路由实现的功能
     console.log(req.body)
-    var path = []
-    for (var i = 0; i < req.files.length; i++) {
-        // 图片会放在uploads目录并且没有后缀，需要自己转存，用到fs模块
-        // 对临时文件转存，fs.rename(oldPath, newPath,callback);
-        fs.rename(req.files[i].path, "uploads/" + req.body.time + req.files[i].originalname, function (err) {
-            if (err) {
-                console.log(err);
-            }
-            console.log('done!');
-        })
-        path[i] = req.body.time + req.files[i].originalname
+    Mes.findOne({ card: req.body.card }, (err, doc) => {
+        if (err) {
+            console.log(err);
+        } else {
+            console.log(doc)
+            if (doc == null) {
+                var path = []
+                for (var i = 0; i < req.files.length; i++) {
+                    // 图片会放在uploads目录并且没有后缀，需要自己转存，用到fs模块
+                    // 对临时文件转存，fs.rename(oldPath, newPath,callback);
+                    fs.rename(req.files[i].path, "uploads/" + req.body.time + req.files[i].originalname, function (err) {
+                        if (err) {
+                            console.log(err);
+                        }
+                        console.log('done!');
+                    })
+                    path[i] = req.body.time + req.files[i].originalname
 
-    }
-    Mes.create({
-        user: req.body.user,
-        name: req.body.name,
-        number: req.body.number,
-        card: req.body.card,
-        base: path,
-        date: req.body.date,
-        state: req.body.state,
-        time: req.body.time,
-        class: req.body.class,
-        ls: req.body.ls
-    }, (err, doc) => {
-        console.log(err)
-        res.json(doc)
-    });
-    User.findOne({ teacher: req.body.class }, function (err, doc) {
-        doc.num++
-        doc.state0++
-        doc.save()
+                }
+                Mes.create({
+                    user: req.body.user,
+                    name: req.body.name,
+                    number: req.body.number,
+                    card: req.body.card,
+                    base: path,
+                    date: req.body.date,
+                    state: req.body.state,
+                    time: req.body.time,
+                    class: req.body.class,
+                    ls: req.body.ls
+                }, (err, doc) => {
+                    console.log(err)
+                    res.json(doc)
+                });
+                User.findOne({ teacher: req.body.class }, function (err, doc) {
+                    doc.num++
+                    doc.state0++
+                    doc.save()
+                })
+            } else {
+                res.send('no')
+            }
+        }
     })
+
 
 })
 
@@ -252,15 +264,38 @@ app.post('/tsearchall', function (req, res) {
 
 app.post('/tsearch', function (req, res) {
 
-    var reg = new RegExp(req.body.date, 'g');
-    Mes.find({ date: reg, class: req.body.class }, function (err, doc) {
-        if (err) {
-            console.log(err)
-        } else {
-            console.log(doc)
-            res.json(doc)
-        }
-    })
+    let reg = new Date(req.body.date).getTime()
+    let reg1 = new Date(req.body.date1).getTime()
+    console.log(reg)
+    if (req.body.ls == '') {
+        Mes.find({
+            time: { $gte: reg },
+            time: { $lte: reg1 },
+            state: req.body.state
+        }, function (err, doc) {
+            if (err) {
+                console.log(err)
+            } else {
+                console.log(doc)
+                res.json(doc)
+            }
+        })
+    } else {
+        Mes.find({
+            ls: req.body.ls,
+            time: { $gte: reg },
+            time: { $lte: reg1 },
+            state: req.body.state
+
+        }, function (err, doc) {
+            if (err) {
+                console.log(err)
+            } else {
+                console.log(doc)
+                res.json(doc)
+            }
+        })
+    }
 })
 
 app.post('/findinfo', function (req, res) {
