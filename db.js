@@ -12,6 +12,9 @@ const articleSchema = new mongoose.Schema({  //schema
     state0: Number,    //中
     state1: Number,    //过
     state2: Number,    //没过
+    state3: Number, //结算
+    total: Number, //结算金额
+    ban: false, //禁止登陆
 })
 
 module.exports = mongoose.model('info', articleSchema);  // model
