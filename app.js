@@ -63,6 +63,7 @@ app.post('/addinfo', function (req, res) {  // 新建的路由，以及此路由
 
     console.log(req.body)
     User.find({ name: req.body.name }, (err, doc) => {
+        console.log(doc);
         if (err) {
             res.end(err)
         }
@@ -70,7 +71,6 @@ app.post('/addinfo', function (req, res) {  // 新建的路由，以及此路由
             res.send('no')
         }
         if (doc.length === 0) {
-            res.send('ok')
             User.create({ name: req.body.name, password: req.body.password, level: req.body.level, teacher: req.body.teacher, class: req.body.class, num: 0, state0: 0, state1: 0, state2: 0, state3: 0, total: 0, ban: false }, (err, doc) => {
                 if (err) {
                     res.end('no')
@@ -107,6 +107,22 @@ app.post('/loginfo', function (req, res) {  // 新建的路由，以及此路由
         }
     });
 
+})
+
+app.post('/beforesubmit', upload.array("file", 5), async (req, res) => {
+    console.log(req.body.card);
+    Mes.find({ card: req.body.card }, (err, doc) => {
+        console.log(doc);
+        if (err) {
+            console.log(err);
+        }
+        if (doc.length > 1) {
+            res.send('no')
+        }
+        else {
+            res.send('ok')
+        }
+    })
 })
 
 app.post('/submit', upload.array("file", 5), async (req, res) => {  // 新建的路由，以及此路由实现的功能
@@ -148,7 +164,7 @@ app.post('/submit', upload.array("file", 5), async (req, res) => {  // 新建的
                             console.log(err)
                             res.json(doc)
                         });
-                        User.findOne({ teacher: req.body.class }, function (err, doc) {
+                        User.findOne({ name: req.body.class }, function (err, doc) {
                             doc.num++
                             doc.state0++
                             doc.save()
@@ -207,10 +223,6 @@ app.post('/submit', upload.array("file", 5), async (req, res) => {  // 新建的
             })
         }
     })
-
-
-
-
 })
 
 app.post('/fixpwd', function (req, res) {
@@ -280,7 +292,24 @@ app.post('/del', function (req, res) {
         }
     })
 })
-
+app.post('/dells', function (req, res) {
+    Ls.remove({ _id: req.body._id }, (err, doc) => {
+        if (err) {
+            console.log(err);
+        } else {
+            res.send('ok')
+        }
+    })
+})
+app.post('/delteam', function (req, res) {
+    User.remove({ _id: req.body._id }, (err, doc) => {
+        if (err) {
+            console.log(err);
+        } else {
+            res.send('ok')
+        }
+    })
+})
 //查
 
 app.post('/findteacher', function (req, res) {
@@ -387,21 +416,50 @@ app.post('/searchadmin', function (req, res) {
     console.log(req.body);
     let reg = new Date(req.body.date).getTime()
     let reg1 = new Date(req.body.date1).getTime()
-    Mes.find({
-        time: { $gte: reg },
-        time: { $lte: reg1 },
-        state: req.body.state,
-        $or: [{ ls: req.body.ls }, { name: req.body.name }, { number: req.body.number }, { card: req.body.card }]
-    }, function (err, doc) {
+
+    let query = { time: { $gte: reg, $lte: reg1 } }
+    if (req.body.name !== '') {
+        query.name = req.body.name
+    }
+    if (req.body.card !== "") {
+        query.card = req.body.card
+    }
+    if (req.body.number !== "") {
+        query.number = req.body.number
+    }
+    if (req.body.ls !== "选择银行") {
+        query.ls = req.body.ls
+    }
+    if (req.body.state !== "选择状态") {
+        query.state = req.body.state
+    }
+    if (req.body.class !== "") {
+        query.class = req.body.class
+    }
+    console.log(query);
+    Mes.find(query, function (err, doc) {
         if (err) {
             console.log(err)
         } else {
-            console.log(doc)
+            // console.log(doc)
             res.json(doc)
         }
     })
 
 
+
+
+})
+
+app.post('/findcap', (req, res) => {
+    User.find({ name: req.body.name, level: 2 }, (err, doc) => {
+        console.log(doc);
+        if (doc.length == 0) {
+            res.send('no')
+        } else {
+            res.json(doc)
+        }
+    })
 })
 
 
@@ -468,17 +526,19 @@ app.post('/pass', function (req, res) {
 })
 
 app.post('/passall', function (req, res) {
-    console.log(req.body);
-    if (req.body.chooseid.length == 0) {
+    if (req.body.chooseid.length === 0) {
         res.send('no')
         return
     }
+    let i = 0
     req.body.chooseid.forEach(element => {
+
+
         Mes.findOne({ _id: element }, function (err, doc) {
             if (err) {
                 console.log(err);
             } else {
-                if (doc.state == '审核中') {
+                if (doc.state == '审核中' || doc.state == '未通过') {
                     doc.state = '已通过'
                     doc.save()
                     User.findOne({ teacher: doc.class }, function (err, doc) {
@@ -488,7 +548,10 @@ app.post('/passall', function (req, res) {
                             doc.state0--
                             doc.state1++
                             doc.save()
-                            res.send('ok')
+                            i++
+                            if (i == req.body.chooseid.length) {
+                                res.send('ok')
+                            }
                         }
                     })
                 } else {
@@ -519,6 +582,7 @@ app.post('/res', function (req, res) {
                         doc.state0--;
                         doc.state2++;
                         doc.save()
+                        res.send("ok")
                     }
                 })
             } else {
@@ -571,7 +635,11 @@ app.post('/Settlement2', function (req, res) {
 })
 
 app.post('/Settlement1', function (req, res) {
-    console.log(req.body.id);
+    if (req.body.id.length === 0) {
+        res.send('no')
+        return
+    }
+    let i = 0
     req.body.id.forEach(element => {
         console.log(element._id);
         Mes.findOne({ _id: element._id }, (err, doc) => {
@@ -585,9 +653,12 @@ app.post('/Settlement1', function (req, res) {
                     console.log(doc);
                     doc.state1--;
                     doc.state3++;
-                    doc.total = doc.total + a;
+                    doc.total = doc.total + (a * req.body.id.length);
                     doc.save();
-                    res.send('ok')
+                    i++
+                    if (i == req.body.id.length) {
+                        res.send('ok')
+                    }
                 })
 
             }
@@ -624,6 +695,29 @@ app.post('/banstudent', (req, res) => {
     User.findOne({ _id: req.body._id }, (err, doc) => {
         console.log(doc);
         doc.ban = !doc.ban
+        doc.save()
+        res.send('ok')
+    })
+})
+
+//改
+app.post('/changecap', (req, res) => {
+    User.findOne({ name: req.body.class, level: "2" }, (err, doc) => {
+        if (doc == null) {
+            res.send('no')
+        }
+        if (doc !== null) {
+            User.findOne({ _id: req.body._id }, (err, doc) => {
+                doc.class = req.body.class
+                doc.save()
+                res.send('ok')
+            })
+        }
+    })
+})
+app.post('/changepwd', (req, res) => {
+    User.findOne({ _id: req.body._id }, (err, doc) => {
+        doc.password = req.body.password
         doc.save()
         res.send('ok')
     })

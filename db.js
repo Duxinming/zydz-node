@@ -6,8 +6,8 @@ const articleSchema = new mongoose.Schema({  //schema
     name: String,       //用户名
     password: String,   //密码 
     level: String,      //身份识别  00一级 00二级 00三级
-    teacher: Number,    //老师编号  非老师 00
-    class: Number,      //班级编号  非学生 00
+    teacher: String,    //老师编号  非老师 00
+    class: String,      //班级编号  非学生 00
     num: Number,
     state0: Number,    //中
     state1: Number,    //过
