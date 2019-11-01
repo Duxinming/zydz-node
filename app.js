@@ -111,17 +111,17 @@ app.post('/loginfo', function (req, res) {  // 新建的路由，以及此路由
 
 app.post('/beforesubmit', upload.array("file", 5), async (req, res) => {
     console.log(req.body.card);
-    Mes.find({ card: req.body.card }, (err, doc) => {
-        console.log(doc);
-        if (err) {
-            console.log(err);
-        }
-        if (doc.length > 1) {
+    Mes.find({ card: req.body.card, $or: [{ state: "已通过" }, { state: "已结算" }], user: req.body.user }, (err, doc) => {
+        if (doc.length !== 0) {
             res.send('no')
         }
-        else {
-            res.send('ok')
+        if (doc.length == 0) {
+            Mes.find({ card: req.body.card, $or: [{ state: "未通过" }, { state: "审核中" }] }, (err, doc) => {
+                console.log(doc);
+                res.json(doc)
+            })
         }
+
     })
 })
 
@@ -145,7 +145,8 @@ app.post('/submit', upload.array("file", 5), async (req, res) => {  // 新建的
                                 }
                                 console.log('done!');
                             })
-                            path[i] = "http://localhost:3000/" + req.body.time + req.files[i].originalname
+                            // path[i] = "http://localhost:3000/" + req.body.time + req.files[i].originalname
+                            path[i] = "http://tongji.oovovv.cn/" + req.body.time + req.files[i].originalname
 
                         }
                         Mes.create({
@@ -340,9 +341,9 @@ app.post('/findmes', function (req, res) {
 })
 
 app.post('/search', function (req, res) {
-
+    console.log(req.body);
     var reg = new RegExp(req.body.date, 'g');
-    Mes.find({ date: reg, user: req.body.user }, function (err, doc) {
+    Mes.find({ date: reg, user: req.body.user, state: req.body.state }, function (err, doc) {
         if (err) {
             console.log(err)
         } else {
@@ -462,6 +463,16 @@ app.post('/findcap', (req, res) => {
     })
 })
 
+app.post('/findstudent1', (req, res) => {
+    User.find({ name: req.body.name, level: 3 }, (err, doc) => {
+        console.log(doc);
+        if (doc.length == 0) {
+            res.send('no')
+        } else {
+            res.json(doc)
+        }
+    })
+})
 
 app.post('/logadmin', function (req, res) {
     Adm.findOne({ name: req.body.name, password: req.body.password }, function (err, doc) {
