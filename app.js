@@ -1,6 +1,7 @@
 let express = require('express');  //引入 express 框架
 var multer = require('multer');
 let bodyParser = require('body-parser'); // 引入 body-parser 中间件
+let xlsx = require('xlsx'); //解析表格模块
 let fs = require('fs');
 let User = require('./db'); // 引入数据库
 let Mes = require('./db1');
@@ -16,6 +17,62 @@ let app = express();  // 把 express 实例化
 app.use(express.static('uploads'));
 app.use(bodyParser.json()); // 使用中间件
 app.use(bodyParser.urlencoded({ extended: false }));//解析post请求数据
+
+// let workbook = xlsx.readFile('model.xlsx'); //workbook就是xls文档对象
+
+// let sheetNames = workbook.SheetNames; //获取表名
+
+// let worksheet = workbook.Sheets[sheetNames[0]]; //通过表明得到表对象
+
+
+// const headers = {};
+// const data = [];
+// const keys = Object.keys(worksheet);
+// keys
+//     // 过滤以 ! 开头的 key
+//     .filter(k => k[0] !== '!')
+//     // 遍历所有单元格
+//     .forEach(k => {
+//         // 如 A11 中的 A
+//         let col = k.substring(0, 1);
+//         // 如 A11 中的 11
+//         let row = parseInt(k.substring(1));
+//         // 当前单元格的值
+//         let value = worksheet[k].v;
+
+//         // 保存字段名
+//         if (row === 1) {
+//             headers[col] = value;
+//             return;
+//         }
+
+//         // 解析成 JSON
+//         if (!data[row]) {
+//             data[row] = {};
+//         }
+//         data[row][headers[col]] = value;
+//     });
+// function formatDate(numb, format = "-") {
+//     let time = new Date((numb - 1) * 24 * 3600000 + 1)
+//     time.setYear(time.getFullYear() - 70)
+//     let year = time.getFullYear() + ''
+//     let month = time.getMonth() + 1 + ''
+//     let date = time.getDate() + ''
+//     if (format && format.length === 1) {
+//         return year + format + month + format + date
+//     }
+//     return year + (month < 10 ? '0' + month : month) + (date < 10 ? '0' + date : date)
+// }
+
+// data.slice(2).forEach(element => {
+//     element.date = formatDate(element.date)
+//     element.time = Date.parse(element.date)
+//     Mes.create(element, (err, doc) => {
+
+//     })
+// })
+
+
 
 
 
@@ -323,6 +380,7 @@ app.post('/findteacher', function (req, res) {
         }
     })
 })
+
 app.post('/findstudent', function (req, res) {
     User.find({ level: '3' }, (err, doc) => {
         if (err) {
@@ -334,6 +392,12 @@ app.post('/findstudent', function (req, res) {
     })
 })
 
+app.post('/Yfindstudent', function (req, res) {
+    User.find({ level: '3' }).skip(req.body.page * 30).limit(30).exec(function (err, docs) {
+        res.json(docs)
+    })
+})
+
 app.post('/findmes', function (req, res) {
     Mes.find({ user: req.body.user }, (err, doc) => {
         res.json(doc)
@@ -341,13 +405,12 @@ app.post('/findmes', function (req, res) {
 })
 
 app.post('/search', function (req, res) {
-    console.log(req.body);
     var reg = new RegExp(req.body.date, 'g');
     Mes.find({ date: reg, user: req.body.user, state: req.body.state }, function (err, doc) {
         if (err) {
             console.log(err)
         } else {
-            console.log(doc)
+            // console.log(doc)
             res.json(doc)
         }
     })
@@ -414,9 +477,8 @@ app.post('/findinfo', function (req, res) {
 
 
 app.post('/searchadmin', function (req, res) {
-    console.log(req.body);
     let reg = new Date(req.body.date).getTime()
-    let reg1 = new Date(req.body.date1).getTime()
+    let reg1 = new Date(req.body.date1).getTime() + 86400000
 
     let query = { time: { $gte: reg, $lte: reg1 } }
     if (req.body.name !== '') {
@@ -442,7 +504,7 @@ app.post('/searchadmin', function (req, res) {
         if (err) {
             console.log(err)
         } else {
-            // console.log(doc)
+            console.log(doc)
             res.json(doc)
         }
     })
@@ -489,7 +551,6 @@ app.post('/logadmin', function (req, res) {
 app.post('/sall', function (req, res) {
     Mes.find({}, function (err, doc) {
         if (!err) {
-            console.log(doc)
             res.json(doc)
         }
         else {
@@ -498,16 +559,28 @@ app.post('/sall', function (req, res) {
 
     })
 })
+
+app.post('/Ysall', function (req, res) {
+    Mes.find({}).skip(req.body.page * 30).limit(30).exec(function (err, docs) {
+        res.json(docs)
+    })
+})
+
 app.post('/sallpass', function (req, res) {
     Mes.find({ $or: [{ state: '已通过' }, { state: '已结算' }] }, function (err, doc) {
         if (!err) {
-            console.log(doc)
             res.json(doc)
         }
         else {
             console.log(err)
         }
 
+    })
+})
+
+app.post('/Ysallpass', function (req, res) {
+    Mes.find({ $or: [{ state: '已通过' }, { state: '已结算' }] }).skip(req.body.page * 30).limit(30).exec(function (err, docs) {
+        res.json(docs)
     })
 })
 
@@ -733,6 +806,224 @@ app.post('/changepwd', (req, res) => {
         res.send('ok')
     })
 })
+
+//导出
+app.post('/outanddown', (req, res) => {
+    let reg = new Date(req.body.date).getTime()
+    let reg1 = new Date(req.body.date1).getTime() + 86400000
+
+    let query = { time: { $gte: reg, $lte: reg1 } }
+    if (req.body.name !== '') {
+        query.name = req.body.name
+    }
+    if (req.body.card !== "") {
+        query.card = req.body.card
+    }
+    if (req.body.number !== "") {
+        query.number = req.body.number
+    }
+    if (req.body.ls !== "选择银行") {
+        query.ls = req.body.ls
+    }
+    if (req.body.state !== "选择状态") {
+        query.state = req.body.state
+    }
+    if (req.body.class !== "") {
+        query.class = req.body.class
+    }
+    console.log(query);
+    Mes.find(query, function (err, doc) {
+        if (err) {
+            console.log(err)
+        } else {
+            console.log(doc)
+            res.json(doc)
+            var _headers = ['date', 'name', 'number', 'card', 'user', 'state', 'ls', 'class', 'money']
+
+            var headers = _headers
+                // 为 _headers 添加对应的单元格位置
+                // [ { v: 'id', position: 'A1' },
+                //   { v: 'name', position: 'B1' },
+                //   { v: 'age', position: 'C1' },
+                //   { v: 'country', position: 'D1' },
+                //   { v: 'remark', position: 'E1' } ]
+                .map((v, i) => Object.assign({}, { v: v, position: String.fromCharCode(65 + i) + 1 }))
+                // 转换成 worksheet 需要的结构
+                // { A1: { v: 'id' },
+                //   B1: { v: 'name' },
+                //   C1: { v: 'age' },
+                //   D1: { v: 'country' },
+                //   E1: { v: 'remark' } }
+                .reduce((prev, next) => Object.assign({}, prev, { [next.position]: { v: next.v } }), {});
+
+            var data = doc
+                // 匹配 headers 的位置，生成对应的单元格数据
+                // [ [ { v: '1', position: 'A2' },
+                //     { v: 'test1', position: 'B2' },
+                //     { v: '30', position: 'C2' },
+                //     { v: 'China', position: 'D2' },
+                //     { v: 'hello', position: 'E2' } ],
+                //   [ { v: '2', position: 'A3' },
+                //     { v: 'test2', position: 'B3' },
+                //     { v: '20', position: 'C3' },
+                //     { v: 'America', position: 'D3' },
+                //     { v: 'world', position: 'E3' } ],
+                //   [ { v: '3', position: 'A4' },
+                //     { v: 'test3', position: 'B4' },
+                //     { v: '18', position: 'C4' },
+                //     { v: 'Unkonw', position: 'D4' },
+                //     { v: '???', position: 'E4' } ] ]
+                .map((v, i) => _headers.map((k, j) => Object.assign({}, { v: v[k], position: String.fromCharCode(65 + j) + (i + 2) })))
+                // 对刚才的结果进行降维处理（二维数组变成一维数组）
+                // [ { v: '1', position: 'A2' },
+                //   { v: 'test1', position: 'B2' },
+                //   { v: '30', position: 'C2' },
+                //   { v: 'China', position: 'D2' },
+                //   { v: 'hello', position: 'E2' },
+                //   { v: '2', position: 'A3' },
+                //   { v: 'test2', position: 'B3' },
+                //   { v: '20', position: 'C3' },
+                //   { v: 'America', position: 'D3' },
+                //   { v: 'world', position: 'E3' },
+                //   { v: '3', position: 'A4' },
+                //   { v: 'test3', position: 'B4' },
+                //   { v: '18', position: 'C4' },
+                //   { v: 'Unkonw', position: 'D4' },
+                //   { v: '???', position: 'E4' } ]
+                .reduce((prev, next) => prev.concat(next))
+                // 转换成 worksheet 需要的结构
+                //   { A2: { v: '1' },
+                //     B2: { v: 'test1' },
+                //     C2: { v: '30' },
+                //     D2: { v: 'China' },
+                //     E2: { v: 'hello' },
+                //     A3: { v: '2' },
+                //     B3: { v: 'test2' },
+                //     C3: { v: '20' },
+                //     D3: { v: 'America' },
+                //     E3: { v: 'world' },
+                //     A4: { v: '3' },
+                //     B4: { v: 'test3' },
+                //     C4: { v: '18' },
+                //     D4: { v: 'Unkonw' },
+                //     E4: { v: '???' } }
+                .reduce((prev, next) => Object.assign({}, prev, { [next.position]: { v: next.v } }), {});
+
+            // 合并 headers 和 data
+            var output = Object.assign({}, headers, data);
+            // 获取所有单元格的位置
+            var outputPos = Object.keys(output);
+            // 计算出范围
+            var ref = outputPos[0] + ':' + outputPos[outputPos.length - 1];
+
+            // 构建 workbook 对象
+            var wb = {
+                SheetNames: ['mySheet'],
+                Sheets: {
+                    'mySheet': Object.assign({}, output, { '!ref': ref })
+                }
+            };
+
+            // 导出 Excel
+            xlsx.writeFile(wb, './uploads/output.xlsx');
+        }
+    })
+})
+
+app.post('/outanddown1', (req, res) => {
+
+    let doc = req.body.team
+    var _headers = ['name','total']
+
+            var headers = _headers
+                // 为 _headers 添加对应的单元格位置
+                // [ { v: 'id', position: 'A1' },
+                //   { v: 'name', position: 'B1' },
+                //   { v: 'age', position: 'C1' },
+                //   { v: 'country', position: 'D1' },
+                //   { v: 'remark', position: 'E1' } ]
+                .map((v, i) => Object.assign({}, { v: v, position: String.fromCharCode(65 + i) + 1 }))
+                // 转换成 worksheet 需要的结构
+                // { A1: { v: 'id' },
+                //   B1: { v: 'name' },
+                //   C1: { v: 'age' },
+                //   D1: { v: 'country' },
+                //   E1: { v: 'remark' } }
+                .reduce((prev, next) => Object.assign({}, prev, { [next.position]: { v: next.v } }), {});
+
+            var data = doc
+                // 匹配 headers 的位置，生成对应的单元格数据
+                // [ [ { v: '1', position: 'A2' },
+                //     { v: 'test1', position: 'B2' },
+                //     { v: '30', position: 'C2' },
+                //     { v: 'China', position: 'D2' },
+                //     { v: 'hello', position: 'E2' } ],
+                //   [ { v: '2', position: 'A3' },
+                //     { v: 'test2', position: 'B3' },
+                //     { v: '20', position: 'C3' },
+                //     { v: 'America', position: 'D3' },
+                //     { v: 'world', position: 'E3' } ],
+                //   [ { v: '3', position: 'A4' },
+                //     { v: 'test3', position: 'B4' },
+                //     { v: '18', position: 'C4' },
+                //     { v: 'Unkonw', position: 'D4' },
+                //     { v: '???', position: 'E4' } ] ]
+                .map((v, i) => _headers.map((k, j) => Object.assign({}, { v: v[k], position: String.fromCharCode(65 + j) + (i + 2) })))
+                // 对刚才的结果进行降维处理（二维数组变成一维数组）
+                // [ { v: '1', position: 'A2' },
+                //   { v: 'test1', position: 'B2' },
+                //   { v: '30', position: 'C2' },
+                //   { v: 'China', position: 'D2' },
+                //   { v: 'hello', position: 'E2' },
+                //   { v: '2', position: 'A3' },
+                //   { v: 'test2', position: 'B3' },
+                //   { v: '20', position: 'C3' },
+                //   { v: 'America', position: 'D3' },
+                //   { v: 'world', position: 'E3' },
+                //   { v: '3', position: 'A4' },
+                //   { v: 'test3', position: 'B4' },
+                //   { v: '18', position: 'C4' },
+                //   { v: 'Unkonw', position: 'D4' },
+                //   { v: '???', position: 'E4' } ]
+                .reduce((prev, next) => prev.concat(next))
+                // 转换成 worksheet 需要的结构
+                //   { A2: { v: '1' },
+                //     B2: { v: 'test1' },
+                //     C2: { v: '30' },
+                //     D2: { v: 'China' },
+                //     E2: { v: 'hello' },
+                //     A3: { v: '2' },
+                //     B3: { v: 'test2' },
+                //     C3: { v: '20' },
+                //     D3: { v: 'America' },
+                //     E3: { v: 'world' },
+                //     A4: { v: '3' },
+                //     B4: { v: 'test3' },
+                //     C4: { v: '18' },
+                //     D4: { v: 'Unkonw' },
+                //     E4: { v: '???' } }
+                .reduce((prev, next) => Object.assign({}, prev, { [next.position]: { v: next.v } }), {});
+
+            // 合并 headers 和 data
+            var output = Object.assign({}, headers, data);
+            // 获取所有单元格的位置
+            var outputPos = Object.keys(output);
+            // 计算出范围
+            var ref = outputPos[0] + ':' + outputPos[outputPos.length - 1];
+
+            // 构建 workbook 对象
+            var wb = {
+                SheetNames: ['mySheet'],
+                Sheets: {
+                    'mySheet': Object.assign({}, output, { '!ref': ref })
+                }
+            };
+
+            // 导出 Excel
+            xlsx.writeFile(wb, './uploads/output.xlsx');
+            res.send('ok')
+})
+
 app.listen(3000, function () { console.log('服务器正在监听 3000 端口') });
 
 
