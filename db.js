@@ -14,6 +14,8 @@ const articleSchema = new mongoose.Schema({  //schema
     state2: Number,    //没过
     state3: Number, //结算
     total: Number, //结算金额
+    chajs: Number, //于上次导出结算单数比较，默认为0
+    cha: Number, //于上次导出比较，默认为0
     ban: false, //禁止登陆
 })
 
