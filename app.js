@@ -64,7 +64,6 @@ app.use(bodyParser.urlencoded({ extended: false }));//解析post请求数据
 //     }
 //     return year + (month < 10 ? '0' + month : month) + (date < 10 ? '0' + date : date)
 // }
-
 // data.slice(2).forEach(element => {
 //     element.date = formatDate(element.date)
 //     element.time = Date.parse(element.date)
@@ -1088,6 +1087,7 @@ app.post('/outtime', (req, res) => {
         res.json(doc)
     })
 })
+
 
 app.listen(3000, function () { console.log('服务器正在监听 3000 端口') });
 
