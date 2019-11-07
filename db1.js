@@ -15,7 +15,8 @@ const mesSchema = new mongoose.Schema({  //schema
     res: String,     //审核未通过的通知
     ls: String,     //银行s
     id: String,     //身份证号
-    money: Number
+    money: Number,
+    endtime: String //结算时间
 })
 
 module.exports = mongoose.model('message', mesSchema);  // model

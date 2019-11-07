@@ -19,7 +19,7 @@ app.use(express.static('uploads'));
 app.use(bodyParser.json()); // 使用中间件
 app.use(bodyParser.urlencoded({ extended: false }));//解析post请求数据
 
-// let workbook = xlsx.readFile('model.xlsx'); //workbook就是xls文档对象
+// let workbook = xlsx.readFile('1.xlsx'); //workbook就是xls文档对象
 
 // let sheetNames = workbook.SheetNames; //获取表名
 
@@ -67,7 +67,7 @@ app.use(bodyParser.urlencoded({ extended: false }));//解析post请求数据
 // data.slice(2).forEach(element => {
 //     element.date = formatDate(element.date)
 //     element.time = Date.parse(element.date)
-//     Mes.create(element, (err, doc) => {
+//     User.create(element, (err, doc) => {
 
 //     })
 // })
@@ -168,7 +168,8 @@ app.post('/loginfo', function (req, res) {  // 新建的路由，以及此路由
 
 app.post('/beforesubmit', upload.array("file", 5), async (req, res) => {
     console.log(req.body.card);
-    Mes.find({ card: req.body.card, $or: [{ state: "已通过" }, { state: "已结算" }], user: req.body.user }, (err, doc) => {
+    Mes.find({ card: req.body.card, $or: [{ state: "已通过" }, { state: "已结算" }] }, (err, doc) => {
+        console.log(doc);
         if (doc.length !== 0) {
             res.send('no')
         }
@@ -399,8 +400,8 @@ app.post('/Yfindstudent', function (req, res) {
 })
 
 app.post('/findmes', function (req, res) {
-    Mes.find({ user: req.body.user }, (err, doc) => {
-        res.json(doc)
+    Mes.find({ user: req.body.user }).sort("-time").exec(function (err, docs) {
+        res.json(docs)
     })
 })
 
@@ -585,14 +586,17 @@ app.post('/Ysallpass', function (req, res) {
 })
 
 app.post('/pass', function (req, res) {
+    // console.log(req.body);
     Mes.findOne({ _id: req.body._id }, function (err, doc) {
         if (err) {
             console.log(err);
         } else {
-            if (doc.state == '审核中') {
+            // console.log(doc);
+            if (doc.state == '审核中' || doc.state == '未通过') {
                 doc.state = '已通过'
                 doc.save()
-                User.findOne({ teacher: doc.class }, function (err, doc) {
+                User.findOne({ name: doc.class }, function (err, doc) {
+                    // console.log(doc);
                     if (err) {
                         console.log(err)
                     } else {
@@ -625,7 +629,7 @@ app.post('/passall', function (req, res) {
                 if (doc.state == '审核中' || doc.state == '未通过') {
                     doc.state = '已通过'
                     doc.save()
-                    User.findOne({ teacher: doc.class }, function (err, doc) {
+                    User.findOne({ name: doc.class }, function (err, doc) {
                         if (err) {
                             console.log(err)
                         } else {
@@ -658,7 +662,7 @@ app.post('/res', function (req, res) {
                 doc.res = req.body.res
                 doc.state = '未通过'
                 doc.save()
-                User.findOne({ teacher: doc.class }, function (err, doc) {
+                User.findOne({ name: doc.class }, function (err, doc) {
                     if (err) {
                         console.log(err)
                     } else {
@@ -685,10 +689,11 @@ app.post('/Settlement', function (req, res) {
         if (doc !== null) {
             doc.state = '已结算'
             doc.money = req.body.money
+            doc.endtime = req.body.endtime
             doc.save()
             let a = doc.money
 
-            User.findOne({ teacher: doc.class }, (err, doc) => {
+            User.findOne({ name: doc.class }, (err, doc) => {
                 console.log(doc);
                 doc.state1--;
                 doc.state3++;
@@ -708,7 +713,7 @@ app.post('/Settlement2', function (req, res) {
             let a = doc.money
             doc.money = req.body.money
             doc.save()
-            User.findOne({ teacher: doc.class }, (err, doc) => {
+            User.findOne({ name: doc.class }, (err, doc) => {
                 let b = parseInt(req.body.money)
                 doc.total = doc.total - a + b;
                 doc.save();
@@ -725,15 +730,16 @@ app.post('/Settlement1', function (req, res) {
     }
     let i = 0
     req.body.id.forEach(element => {
-        console.log(element._id);
+        // console.log(element._id);
         Mes.findOne({ _id: element._id }, (err, doc) => {
-            console.log(doc);
+            // console.log(doc);
             if (doc !== null) {
                 doc.state = '已结算'
                 doc.money = req.body.money
+                doc.endtime = req.body.endtime
                 let a = doc.money
                 doc.save()
-                User.findOne({ teacher: doc.class }, (err, doc) => {
+                User.findOne({ name: doc.class }, (err, doc) => {
                     console.log(doc);
                     doc.state1--;
                     doc.state3++;
@@ -956,12 +962,12 @@ app.post('/outanddown', (req, res) => {
                         'mySheet': Object.assign({}, output, { '!ref': ref })
                     }
                 };
-
                 // 导出 Excel
                 xlsx.writeFile(wb, './uploads/' + req.body.date + '-' + req.body.date1 + '.xlsx');
-                setTimeout(() => {
-                    fs.unlinkSync('./uploads/' + req.body.date + '-' + req.body.date1 + '.xlsx');
-                }, 500);
+                res.send('ok')
+
+
+
             }
             else {
                 res.send('no')
@@ -970,6 +976,11 @@ app.post('/outanddown', (req, res) => {
     })
 
 
+})
+
+app.post('/delefile', (req, res) => {
+    fs.unlinkSync('./uploads/' + req.body.date + '-' + req.body.date1 + '.xlsx');
+    res.send('ok')
 })
 
 app.post('/outanddown1', (req, res) => {
