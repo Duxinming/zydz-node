@@ -478,18 +478,18 @@ app.post('/findinfo', function (req, res) {
 
 
 app.post('/searchadmin', function (req, res) {
-    let reg = new Date(req.body.date).getTime()
-    let reg1 = new Date(req.body.date1).getTime() + 86400000
+    // let reg = new Date(req.body.date).getTime()
+    // let reg1 = new Date(req.body.date1).getTime() + 86400000
 
-    let query = { time: { $gte: reg, $lte: reg1 } }
+    let query = {}
     if (req.body.name !== '') {
-        query.name = req.body.name
+        query.name = { $regex: req.body.name }
     }
     if (req.body.card !== "") {
-        query.card = req.body.card
+        query.card = { $regex: req.body.card }
     }
     if (req.body.number !== "") {
-        query.number = req.body.number
+        query.number = { $regex: req.body.number }
     }
     if (req.body.ls !== "选择银行") {
         query.ls = req.body.ls
@@ -497,10 +497,7 @@ app.post('/searchadmin', function (req, res) {
     if (req.body.state !== "选择状态") {
         query.state = req.body.state
     }
-    if (req.body.class !== "") {
-        query.class = req.body.class
-    }
-    console.log(query);
+    // console.log(query.name);
     Mes.find(query, function (err, doc) {
         if (err) {
             console.log(err)
@@ -673,7 +670,24 @@ app.post('/res', function (req, res) {
                         res.send("ok")
                     }
                 })
-            } else {
+            }
+            if (doc.state == '已通过') {
+                doc.res = req.body.res
+                doc.state = '未通过'
+                doc.save()
+                User.findOne({ name: doc.class }, function (err, doc) {
+                    if (err) {
+                        console.log(err)
+                    } else {
+                        console.log(doc);
+                        doc.state1--;
+                        doc.state2++;
+                        doc.save()
+                        res.send("ok")
+                    }
+                })
+            }
+            else {
                 res.send('no')
             }
 
@@ -759,13 +773,13 @@ app.post('/Settlement1', function (req, res) {
 app.post('/searchSettlement', function (req, res) {
     let query = {}
     if (req.body.name !== '') {
-        query.name = req.body.name
+        query.name = { $regex: req.body.name }
     }
     if (req.body.card !== "") {
-        query.card = req.body.card
+        query.card = { $regex: req.body.card }
     }
     if (req.body.number !== "") {
-        query.number = req.body.number
+        query.number = { $regex: req.body.number }
     }
     if (req.body.ls !== "选择银行") {
         query.ls = req.body.ls
